@@ -16,12 +16,20 @@ func main() {
 	//
 	// goroutine for api logic
 	//
+	//
 
 	// alpha vantage client
-	av, err := api.InitAlphaVantageClient()
-	if err != nil {
-		log.Fatalf("Unable to initialize alpha vantage client: %v", err)
-	}
+	go func() {
+		av, err := api.InitAlphaVantageClient()
+		if err != nil {
+			log.Fatalf("Unable to initialize alpha vantage client: %v", err)
+		}
+
+		for {
+			api.TrackRSI("SPY", av)
+		}
+
+	}()
 
 	// routine for listening for telegram
 	for {

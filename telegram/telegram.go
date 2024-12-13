@@ -1,15 +1,16 @@
 package telegram
 
 import (
-	"buy-the-dip-bot/api"
 	"buy-the-dip-bot/utils"
-	"fmt"
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 var bot *tgbotapi.BotAPI
+
+// temporarily storing chatID here before user storage logic
+var ChatID int64
 
 func InitBot() error {
 	var err error
@@ -55,8 +56,6 @@ func handleCommand(message *tgbotapi.Message) {
 		SendMessage(message.Chat.ID, "You've subscribed!")
 	case "/unsubscribe":
 		SendMessage(message.Chat.ID, "You've unsubscribed!")
-	case "rsi":
-		SendMessage(message.Chat.ID, fmt.Sprintf("%f", api.TodaysRSI))
 	default:
 		SendMessage(message.Chat.ID, "Unknown command.")
 	}
@@ -64,10 +63,5 @@ func handleCommand(message *tgbotapi.Message) {
 
 func SendMessage(chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
-	bot.Send(msg)
-}
-
-func SendRSI(chatID int64, rsi string) {
-	msg := tgbotapi.NewMessage(chatID, rsi)
 	bot.Send(msg)
 }
