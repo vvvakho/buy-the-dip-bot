@@ -1,11 +1,12 @@
 package telegram
 
 import (
+	"buy-the-dip-bot/api"
+	"buy-the-dip-bot/utils"
+	"fmt"
 	"log"
-	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/joho/godotenv"
 )
 
 var bot *tgbotapi.BotAPI
@@ -13,10 +14,10 @@ var bot *tgbotapi.BotAPI
 func InitBot() error {
 	var err error
 
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("Error loading .env file")
+	token, err := utils.GetEnv("TELEGRAM_BOT_TOKEN")
+	if err != nil {
+		log.Fatal("Error loading env variable")
 	}
-	token := os.Getenv("TELEGRAM_BOT_TOKEN")
 	if token == "" {
 		log.Fatal("Token not found")
 	}
@@ -49,17 +50,24 @@ func ListenForUpdates() {
 func handleCommand(message *tgbotapi.Message) {
 	switch message.Text {
 	case "/start":
-		sendMessage(message.Chat.ID, "Welcome to the bot!")
+		SendMessage(message.Chat.ID, "Welcome to the bot!")
 	case "/subscribe":
-		sendMessage(message.Chat.ID, "You've subscribed!")
+		SendMessage(message.Chat.ID, "You've subscribed!")
 	case "/unsubscribe":
-		sendMessage(message.Chat.ID, "You've unsubscribed!")
+		SendMessage(message.Chat.ID, "You've unsubscribed!")
+	case "rsi":
+		SendMessage(message.Chat.ID, fmt.Sprintf("%f", api.TodaysRSI))
 	default:
-		sendMessage(message.Chat.ID, "Unknown command.")
+		SendMessage(message.Chat.ID, "Unknown command.")
 	}
 }
 
-func sendMessage(chatID int64, text string) {
+func SendMessage(chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
+	bot.Send(msg)
+}
+
+func SendRSI(chatID int64, rsi string) {
+	msg := tgbotapi.NewMessage(chatID, rsi)
 	bot.Send(msg)
 }
