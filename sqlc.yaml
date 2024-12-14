@@ -1,12 +1,8 @@
 version: "2"
-cloud:
-    organization: ""
-    project: ""
-    hostname: ""
-servers: []
-sql: []
-overrides:
-    go: null
-plugins: []
-rules: []
-options: {}
+sql:
+  - schema: "database/schema"                # Path to your schema file
+    queries: "database/queries"                  # Path to your SQL query files
+    engine: "postgresql"                   # Database engine
+    gen:
+      go:
+        out: "internal/db"                 # Output directory for generated files

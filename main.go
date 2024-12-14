@@ -2,9 +2,15 @@ package main
 
 import (
 	"buy-the-dip-bot/api"
+	"buy-the-dip-bot/internal/db"
 	"buy-the-dip-bot/telegram"
+	"database/sql"
 	"log"
+	"os"
 	"time"
+
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -14,10 +20,13 @@ func main() {
 	}
 
 	// database
-	//
-	// goroutine for api logic
-	//
-	//
+	godotenv.Load()
+	dbURL := os.Getenv("POSTGRES_URL")
+	postgres, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Unable to initialize database: %v", err)
+	}
+	queriesDB := db.New(postgres)
 
 	// alpha vantage client
 	go func() {
@@ -27,7 +36,7 @@ func main() {
 		}
 
 		for {
-			api.TrackRSI("SPY", av)
+			api.TrackRSI("SPY", av, queriesDB)
 			time.Sleep(15 * time.Second)
 		}
 
@@ -35,7 +44,7 @@ func main() {
 
 	// routine for listening for telegram
 	for {
-		telegram.ListenForUpdates()
+		telegram.ListenForUpdates(queriesDB)
 	}
 
 }

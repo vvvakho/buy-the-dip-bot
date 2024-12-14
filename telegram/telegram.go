@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"buy-the-dip-bot/internal/db"
 	"buy-the-dip-bot/utils"
 	"log"
 
@@ -8,9 +9,6 @@ import (
 )
 
 var bot *tgbotapi.BotAPI
-
-// temporarily storing chatID here before user storage logic
-var ChatID int64
 
 func InitBot() error {
 	var err error
@@ -32,7 +30,7 @@ func InitBot() error {
 	return nil
 }
 
-func ListenForUpdates() {
+func ListenForUpdates(queriesDB *db.Queries) {
 	if bot == nil {
 		log.Fatal("Bot is not initialized.")
 	}
@@ -43,21 +41,8 @@ func ListenForUpdates() {
 
 	for update := range updates {
 		if update.Message != nil {
-			handleCommand(update.Message)
+			handleCommand(update.Message, queriesDB)
 		}
-	}
-}
-
-func handleCommand(message *tgbotapi.Message) {
-	switch message.Text {
-	case "/start":
-		SendMessage(message.Chat.ID, "Welcome to the bot!")
-	case "/subscribe":
-		SendMessage(message.Chat.ID, "You've subscribed!")
-	case "/unsubscribe":
-		SendMessage(message.Chat.ID, "You've unsubscribed!")
-	default:
-		SendMessage(message.Chat.ID, "Unknown command.")
 	}
 }
 
