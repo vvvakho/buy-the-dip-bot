@@ -4,6 +4,7 @@ import (
 	"buy-the-dip-bot/api"
 	"buy-the-dip-bot/telegram"
 	"log"
+	"time"
 )
 
 func main() {
@@ -22,11 +23,12 @@ func main() {
 	go func() {
 		av, err := api.InitAlphaVantageClient()
 		if err != nil {
-			log.Fatalf("Unable to initialize alpha vantage client: %v", err)
+			log.Printf("Unable to initialize alpha vantage client: %v", err)
 		}
 
 		for {
 			api.TrackRSI("SPY", av)
+			time.Sleep(15 * time.Second)
 		}
 
 	}()

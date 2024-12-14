@@ -4,7 +4,6 @@ import (
 	"buy-the-dip-bot/telegram"
 	"fmt"
 	"log"
-	"time"
 )
 
 type MarketDataProvider interface {
@@ -18,7 +17,6 @@ func TrackRSI(ticker string, m MarketDataProvider) {
 	}
 
 	tgSendRSI(ticker, rsi)
-	time.Sleep(15 * time.Second)
 }
 
 func tgSendRSI(ticker string, rsi float64) error {
