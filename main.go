@@ -39,7 +39,6 @@ func main() {
 			api.TrackRSI("SPY", av, queriesDB)
 			time.Sleep(15 * time.Second)
 		}
-
 	}()
 
 	// routine for listening for telegram
