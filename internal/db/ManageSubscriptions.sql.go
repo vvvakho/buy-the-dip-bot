@@ -7,7 +7,6 @@ package db
 
 import (
 	"context"
-	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -29,7 +28,7 @@ func (q *Queries) AddSubscription(ctx context.Context, arg AddSubscriptionParams
 }
 
 const getSubscription = `-- name: GetSubscription :one
-SELECT sub_id, active FROM user_subscriptions
+SELECT sub_id, user_id, ticker, date_subscribed, last_notified, active FROM user_subscriptions
 WHERE user_id = $1 AND ticker = $2
 LIMIT 1
 `
@@ -39,15 +38,17 @@ type GetSubscriptionParams struct {
 	Ticker string
 }
 
-type GetSubscriptionRow struct {
-	SubID  uuid.UUID
-	Active sql.NullBool
-}
-
-func (q *Queries) GetSubscription(ctx context.Context, arg GetSubscriptionParams) (GetSubscriptionRow, error) {
+func (q *Queries) GetSubscription(ctx context.Context, arg GetSubscriptionParams) (UserSubscription, error) {
 	row := q.db.QueryRowContext(ctx, getSubscription, arg.UserID, arg.Ticker)
-	var i GetSubscriptionRow
-	err := row.Scan(&i.SubID, &i.Active)
+	var i UserSubscription
+	err := row.Scan(
+		&i.SubID,
+		&i.UserID,
+		&i.Ticker,
+		&i.DateSubscribed,
+		&i.LastNotified,
+		&i.Active,
+	)
 	return i, err
 }
 
@@ -97,5 +98,48 @@ type ReactivateSubscriptionParams struct {
 
 func (q *Queries) ReactivateSubscription(ctx context.Context, arg ReactivateSubscriptionParams) error {
 	_, err := q.db.ExecContext(ctx, reactivateSubscription, arg.UserID, arg.Ticker)
+	return err
+}
+
+const tempGetAllUsers = `-- name: TempGetAllUsers :many
+SELECT DISTINCT user_id FROM user_subscriptions
+`
+
+func (q *Queries) TempGetAllUsers(ctx context.Context) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, tempGetAllUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var user_id int64
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const unsubscribe = `-- name: Unsubscribe :exec
+UPDATE user_subscriptions
+SET active = false
+WHERE user_id = $1 AND ticker = $2
+`
+
+type UnsubscribeParams struct {
+	UserID int64
+	Ticker string
+}
+
+func (q *Queries) Unsubscribe(ctx context.Context, arg UnsubscribeParams) error {
+	_, err := q.db.ExecContext(ctx, unsubscribe, arg.UserID, arg.Ticker)
 	return err
 }

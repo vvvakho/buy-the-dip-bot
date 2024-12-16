@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"buy-the-dip-bot/database"
 	"buy-the-dip-bot/internal/db"
 	"buy-the-dip-bot/utils"
 	"log"
@@ -49,4 +50,16 @@ func ListenForUpdates(queriesDB *db.Queries) {
 func SendMessage(chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
 	bot.Send(msg)
+}
+
+func NotifyAllUsers(queriesDB *db.Queries, text string) {
+	// TODO: add user to UsersDB when handler /start
+
+	users, err := database.GetAllUserIDs(queriesDB)
+	if err != nil {
+		log.Printf("Error notifying users: %v", err)
+	}
+	for _, chatID := range users {
+		bot.Send(tgbotapi.NewMessage(chatID, text))
+	}
 }
