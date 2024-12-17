@@ -1,8 +1,12 @@
 package api
 
 import (
+	"buy-the-dip-bot/database"
+	"buy-the-dip-bot/internal/db"
+	"buy-the-dip-bot/telegram"
 	"buy-the-dip-bot/utils"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -29,6 +33,11 @@ type AVDataRSI struct {
 	} `json:"Technical Analysis: RSI"`
 }
 
+type RSI struct {
+	RSI  float64
+	Date time.Time
+}
+
 var avEnv = "ALPHA_VANTAGE_API_KEY"
 
 func InitAlphaVantageClient() (*AVClient, error) {
@@ -41,7 +50,28 @@ func InitAlphaVantageClient() (*AVClient, error) {
 	return &AVClient{ApiKey: apiKey}, nil
 }
 
-func (av *AVClient) FetchRSI(ticker string) (float64, error) {
+func (av *AVClient) FetchRSI(ticker string, date time.Time, queriesDB *db.Queries) (RSI, error) {
+
+	telegram.SendMessage(174433862, "Attempting to Fetch RSI")
+	telegram.SendMessage(174433862, "Checking if RSI for date exists in DB")
+
+	rsiRow, err := database.CheckRSI(ticker, date, queriesDB)
+	telegram.SendMessage(174433862, err.Error())
+	if err != nil {
+		if errors.Is(err, database.ErrRSINotFound) {
+			rsi, err := requestRSI(ticker, queriesDB)
+			if err != nil {
+				return RSI{}, err
+			}
+			return RSI{RSI: rsi.RSI, Date: rsi.Date}, nil
+		}
+		return RSI{}, err
+	}
+	return RSI{RSI: rsiRow.Rsi, Date: rsiRow.Date}, nil
+}
+
+func requestRSI(ticker string, queriesDB *db.Queries) (RSI, error) {
+	telegram.SendMessage(174433862, "Attempting to request RSI")
 	//url := fmt.Sprintf("https://www.alphavantage.co/query?function=RSI&symbol=%s&interval=weekly&time_period=10&series_type=open&apikey=%s", ticker, c.ApiKey)
 
 	//log.Print("Initiating Get request")
@@ -67,7 +97,7 @@ func (av *AVClient) FetchRSI(ticker string) (float64, error) {
 
 	file, err := os.Open(fileName)
 	if err != nil {
-		return 0, fmt.Errorf("failed to open file: %v", err)
+		return RSI{}, fmt.Errorf("failed to open file: %v", err)
 	}
 	defer file.Close()
 
@@ -76,7 +106,7 @@ func (av *AVClient) FetchRSI(ticker string) (float64, error) {
 	//	return 0, fmt.Errorf("failed to decode RSI data: %v", err)
 	//}
 	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return 0, fmt.Errorf("failed to decode file data: %v", err)
+		return RSI{}, fmt.Errorf("failed to decode file data: %v", err)
 	}
 
 	todaysDate := time.Now()
@@ -85,13 +115,18 @@ func (av *AVClient) FetchRSI(ticker string) (float64, error) {
 		if rsiData, ok := data.TechnicalAnalysisRSI[dateKey]; ok {
 			rsiFloat, err := strconv.ParseFloat(rsiData.RSI, 64)
 			if err != nil {
-				return 0, err
+				return RSI{}, err
 			}
-			return rsiFloat, nil
+
+			telegram.SendMessage(174433862, "RSI requested, attempting to add to DB")
+			if err := database.AddRSI(ticker, rsiFloat, data.MetaData.LastRefreshed, queriesDB); err != nil {
+				log.Printf("Error saving RSI record to database: %v", err)
+			}
+			return RSI{RSI: rsiFloat, Date: todaysDate}, nil
 		}
 
 		todaysDate = todaysDate.AddDate(0, 0, -1)
 	}
 
-	return 0, fmt.Errorf("no RSI data available for %s", ticker)
+	return RSI{}, fmt.Errorf("no RSI data available for %s", ticker)
 }

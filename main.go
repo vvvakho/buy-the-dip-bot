@@ -36,6 +36,7 @@ func main() {
 		}
 
 		for {
+			telegram.SendMessage(174433862, "Attempting to track SPY")
 			api.TrackRSI("SPY", av, queriesDB)
 			time.Sleep(15 * time.Second)
 		}

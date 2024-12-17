@@ -6,9 +6,17 @@ package db
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
+
+type Rsi struct {
+	RsiID  uuid.UUID
+	Ticker string
+	Rsi    float64
+	Date   time.Time
+}
 
 type UserSubscription struct {
 	SubID          uuid.UUID
