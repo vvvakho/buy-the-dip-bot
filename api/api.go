@@ -23,8 +23,6 @@ func TrackRSI(ticker string, m MarketDataProvider, queriesDB *db.Queries) {
 }
 
 func tgSendRSI(ticker string, rsi RSI, queriesDB *db.Queries) error {
-
-	telegram.SendMessage(174433862, "Attempting to send RSI to user")
 	subRows, err := queriesDB.GetSubscriptionsByTicker(context.Background(), ticker)
 	if err != nil {
 		return err

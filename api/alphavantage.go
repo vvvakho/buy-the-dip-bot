@@ -3,7 +3,6 @@ package api
 import (
 	"buy-the-dip-bot/database"
 	"buy-the-dip-bot/internal/db"
-	"buy-the-dip-bot/telegram"
 	"buy-the-dip-bot/utils"
 	"encoding/json"
 	"errors"
@@ -51,12 +50,7 @@ func InitAlphaVantageClient() (*AVClient, error) {
 }
 
 func (av *AVClient) FetchRSI(ticker string, date time.Time, queriesDB *db.Queries) (RSI, error) {
-
-	telegram.SendMessage(174433862, "Attempting to Fetch RSI")
-	telegram.SendMessage(174433862, "Checking if RSI for date exists in DB")
-
-	rsiRow, err := database.CheckRSI(ticker, date, queriesDB)
-	telegram.SendMessage(174433862, err.Error())
+	rsiRow, err := database.CheckRSIinDB(ticker, date, queriesDB)
 	if err != nil {
 		if errors.Is(err, database.ErrRSINotFound) {
 			rsi, err := requestRSI(ticker, queriesDB)
@@ -71,7 +65,6 @@ func (av *AVClient) FetchRSI(ticker string, date time.Time, queriesDB *db.Querie
 }
 
 func requestRSI(ticker string, queriesDB *db.Queries) (RSI, error) {
-	telegram.SendMessage(174433862, "Attempting to request RSI")
 	//url := fmt.Sprintf("https://www.alphavantage.co/query?function=RSI&symbol=%s&interval=weekly&time_period=10&series_type=open&apikey=%s", ticker, c.ApiKey)
 
 	//log.Print("Initiating Get request")
@@ -118,7 +111,6 @@ func requestRSI(ticker string, queriesDB *db.Queries) (RSI, error) {
 				return RSI{}, err
 			}
 
-			telegram.SendMessage(174433862, "RSI requested, attempting to add to DB")
 			if err := database.AddRSI(ticker, rsiFloat, data.MetaData.LastRefreshed, queriesDB); err != nil {
 				log.Printf("Error saving RSI record to database: %v", err)
 			}

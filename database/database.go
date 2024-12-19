@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -74,7 +75,7 @@ func GetAllUserIDs(queriesDB *db.Queries) ([]int64, error) {
 	return users, nil
 }
 
-func CheckRSI(ticker string, date time.Time, queriesDB *db.Queries) (db.Rsi, error) {
+func CheckRSIinDB(ticker string, date time.Time, queriesDB *db.Queries) (db.Rsi, error) {
 	dateCheck := date
 	for i := 0; i < 10; i++ {
 		rsiRow, err := queriesDB.CheckRSI(context.Background(), db.CheckRSIParams{Ticker: ticker, Column2: dateCheck})
@@ -86,8 +87,10 @@ func CheckRSI(ticker string, date time.Time, queriesDB *db.Queries) (db.Rsi, err
 			}
 			return db.Rsi{}, err
 		}
+		log.Printf("RSI record found in DB")
 		return db.Rsi{Rsi: rsiRow.Rsi, Date: rsiRow.Date}, nil
 	}
+	log.Printf("RSI not found in DB")
 	return db.Rsi{}, ErrRSINotFound
 
 }
