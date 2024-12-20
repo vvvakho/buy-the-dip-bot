@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -53,7 +53,7 @@ func (av *AVClient) FetchRSI(ticker string, date time.Time, queriesDB *db.Querie
 	rsiRow, err := database.CheckRSIinDB(ticker, date, queriesDB)
 	if err != nil {
 		if errors.Is(err, database.ErrRSINotFound) {
-			rsi, err := requestRSI(ticker, queriesDB)
+			rsi, err := av.requestRSI(ticker, queriesDB)
 			if err != nil {
 				return RSI{}, err
 			}
@@ -64,42 +64,19 @@ func (av *AVClient) FetchRSI(ticker string, date time.Time, queriesDB *db.Querie
 	return RSI{RSI: rsiRow.Rsi, Date: rsiRow.Date}, nil
 }
 
-func requestRSI(ticker string, queriesDB *db.Queries) (RSI, error) {
-	//url := fmt.Sprintf("https://www.alphavantage.co/query?function=RSI&symbol=%s&interval=weekly&time_period=10&series_type=open&apikey=%s", ticker, c.ApiKey)
+func (av *AVClient) requestRSI(ticker string, queriesDB *db.Queries) (RSI, error) {
+	url := fmt.Sprintf("https://www.alphavantage.co/query?function=RSI&symbol=%s&interval=weekly&time_period=10&series_type=open&apikey=%s", ticker, av.ApiKey)
 
-	//log.Print("Initiating Get request")
-	//resp, err := http.Get(url)
-	//if err != nil {
-	//	return 0, fmt.Errorf("failed to fetch RSI: %v", err)
-	//}
-	//defer resp.Body.Close()
-
-	fileName := fmt.Sprintf("%s_rsi.json", ticker)
-	//outFile, err := os.Create(fileName)
-	//if err != nil {
-	//	return 0, fmt.Errorf("failed to create file: %v", err)
-	//}
-	//defer outFile.Close()
-
-	//_, err = io.Copy(outFile, resp.Body)
-	//if err != nil {
-	//	return 0, fmt.Errorf("failed to write response to file: %v", err)
-	//}
-
-	//log.Printf("Repsonse successfully written to %s", fileName)
-
-	file, err := os.Open(fileName)
+	log.Print("Initiating Get request")
+	resp, err := http.Get(url)
 	if err != nil {
-		return RSI{}, fmt.Errorf("failed to open file: %v", err)
+		return RSI{}, fmt.Errorf("failed to fetch RSI: %v", err)
 	}
-	defer file.Close()
+	defer resp.Body.Close()
 
 	var data AVDataRSI
-	//if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-	//	return 0, fmt.Errorf("failed to decode RSI data: %v", err)
-	//}
-	if err := json.NewDecoder(file).Decode(&data); err != nil {
-		return RSI{}, fmt.Errorf("failed to decode file data: %v", err)
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return RSI{}, fmt.Errorf("failed to decode RSI data: %v", err)
 	}
 
 	todaysDate := time.Now()
