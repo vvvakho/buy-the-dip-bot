@@ -3,8 +3,8 @@ package api
 import (
 	"buy-the-dip-bot/internal/db"
 	"buy-the-dip-bot/telegram"
+	"buy-the-dip-bot/utils"
 	"context"
-	"fmt"
 	"log"
 	"time"
 )
@@ -29,7 +29,8 @@ func tgSendRSI(ticker string, rsi RSI, queriesDB *db.Queries) error {
 	}
 
 	for _, sub := range subRows {
-		telegram.SendMessage(sub.UserID, fmt.Sprintf("%v\n\nRSI of %s: %f", rsi.Date, ticker, rsi.RSI))
+		formattedMessage := utils.FormatMessage(rsi.Date, ticker, rsi.RSI)
+		telegram.SendMessage(sub.UserID, formattedMessage)
 	}
 
 	return nil

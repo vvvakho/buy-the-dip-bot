@@ -49,7 +49,11 @@ func ListenForUpdates(queriesDB *db.Queries) {
 
 func SendMessage(chatID int64, text string) {
 	msg := tgbotapi.NewMessage(chatID, text)
-	bot.Send(msg)
+	// msg.ParseMode = "MarkdownV2"
+	_, err := bot.Send(msg)
+	if err != nil {
+		log.Printf("Error sending message: %v", err)
+	}
 }
 
 func NotifyAllUsers(queriesDB *db.Queries, text string) {

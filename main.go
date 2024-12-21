@@ -35,6 +35,7 @@ func main() {
 			log.Printf("Unable to initialize alpha vantage client: %v", err)
 		}
 
+		// track and send RSI
 		for {
 			api.TrackRSI("SPY", av, queriesDB)
 			time.Sleep(15 * time.Second)
