@@ -37,6 +37,33 @@ type RSI struct {
 	Date time.Time
 }
 
+type AVDataDaily struct {
+	MetaData struct {
+		Information   string `json:"1. Information"`
+		Symbol        string `json:"2. Symbol"`
+		LastRefreshed string `json:"3. Last Refreshed"`
+		OutputSize    string `json:"4. Output Size"`
+		TimeZone      string `json:"5. Time Zone"`
+	} `json:"Meta Data"`
+	TimeSeriesDaily map[string]DailyJson `json:"Time Series (Daily)"`
+}
+
+type DailyJson struct {
+	Open   string `json:"1. open"`
+	High   string `json:"2. high"`
+	Low    string `json:"3. low"`
+	Close  string `json:"4. close"`
+	Volume string `json:"5. volume"`
+}
+
+type Daily struct {
+	Open   float64
+	High   float64
+	Low    float64
+	Close  float64
+	Volume uint32
+}
+
 var avEnv = "ALPHA_VANTAGE_API_KEY"
 
 func InitAlphaVantageClient() (*AVClient, error) {
@@ -98,4 +125,59 @@ func (av *AVClient) requestRSI(ticker string, queriesDB *db.Queries) (RSI, error
 	}
 
 	return RSI{}, fmt.Errorf("no RSI data available for %s", ticker)
+}
+
+func (av *AVClient) FetchDaily(ticker string, date time.Time, queriesDB *db.Queries) (Daily, error) {
+
+	log.Printf("fetching daily data for ticker %s, date %v\n", ticker, date)
+	daily, err := av.requestDaily(ticker, date, queriesDB)
+	if err != nil {
+		return Daily{}, fmt.Errorf("error fetching daily data: %v", err)
+	}
+
+	return daily, nil
+}
+
+func (av *AVClient) requestDaily(ticker string, date time.Time, queriesDB *db.Queries) (Daily, error) {
+	url := fmt.Sprintf("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=%s&apikey=%s", ticker, av.ApiKey)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return Daily{}, fmt.Errorf("error making request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	data := AVDataDaily{}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return Daily{}, fmt.Errorf("error decoding response: %v", err)
+	}
+
+	log.Println(data)
+
+	latestDate := date
+	for i := 0; i < 7; i++ {
+		dateString := latestDate.Format("2006-01-02")
+		todaysData, ok := data.TimeSeriesDaily[dateString]
+		if !ok {
+			latestDate = latestDate.AddDate(0, 0, -1)
+		} else {
+			openFloat, _ := strconv.ParseFloat(todaysData.Open, 64)
+			highFloat, _ := strconv.ParseFloat(todaysData.High, 64)
+			lowFloat, _ := strconv.ParseFloat(todaysData.Low, 64)
+			closeFloat, _ := strconv.ParseFloat(todaysData.Close, 64)
+			volUint, _ := strconv.ParseUint(todaysData.Volume, 10, 32)
+
+			dataFormatted := Daily{
+				Open:   openFloat,
+				High:   highFloat,
+				Low:    lowFloat,
+				Close:  closeFloat,
+				Volume: uint32(volUint),
+			}
+			return dataFormatted, nil
+		}
+	}
+
+	return Daily{}, errors.New("error retrieving daily data")
+
 }

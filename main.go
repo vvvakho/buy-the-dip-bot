@@ -28,21 +28,31 @@ func main() {
 	}
 	queriesDB := db.New(postgres)
 
-	// alpha vantage client
+	// proactive client
 	go func() {
+		// alpha vantage client
 		av, err := api.InitAlphaVantageClient()
 		if err != nil {
 			log.Printf("Unable to initialize alpha vantage client: %v", err)
 		}
 
+		// track and send daily
+		go func() {
+			for {
+				api.TrackPrice("SPY", av, queriesDB)
+				time.Sleep(15 * time.Second)
+			}
+		}()
+
 		// track and send RSI
 		for {
 			api.TrackRSI("SPY", av, queriesDB)
-			time.Sleep(15 * time.Second)
+			time.Sleep(1 * time.Minute)
 		}
+
 	}()
 
-	// routine for listening for telegram
+	// reactive client
 	for {
 		telegram.ListenForUpdates(queriesDB)
 	}
